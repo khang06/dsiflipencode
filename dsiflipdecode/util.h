@@ -11,3 +11,14 @@
 // depending on the current source line to make sure variable names are unique.
 #define INSERT_PADDING_BYTES(num_bytes) uint8_t CONCAT2(pad, __LINE__)[(num_bytes)];
 #define INSERT_PADDING_WORDS(num_words) uint32_t CONCAT2(pad, __LINE__)[(num_words)];
+
+template <typename T>
+T clamp(T num, T min, T max) {
+    if (num < min) {
+        return min;
+    }
+    if (num > max) {
+        return max;
+    }
+    return num;
+}

@@ -51,19 +51,19 @@ namespace dsiflipdecode {
 
     // returns char array, 0xRRGGBBAA
     unsigned char* FlipnoteParser::DecodeThumbnail() {
-        unsigned char* out = new unsigned char[0x600 * 2 * 4]; // multiply by 2 because thumbnail color values are stored as 4-bit values and not bytes, and multiply by 4 because we need to store as argb
+        unsigned char* out = new unsigned char[0x600 * 2 * 4]; // multiply by 2 because thumbnail color values are stored as 4-bit values and not bytes, and multiply by 4 because we need to store as rgba
         unsigned char color;
         for (int i = 0; i < 0x600; ++i) {
             color = flipnote_file.thumbnail[i] & 0x0F; // low nibble
-            out[i * 8 + 3] = 0xFF; // always opaque
-            out[i * 8 + 2] = thumbnail_color_map[color].blue;
-            out[i * 8 + 1] = thumbnail_color_map[color].green;
             out[i * 8] = thumbnail_color_map[color].red;
+            out[i * 8 + 1] = thumbnail_color_map[color].green;
+            out[i * 8 + 2] = thumbnail_color_map[color].blue;
+            out[i * 8 + 3] = 0xFF; // always opaque
             color = (flipnote_file.thumbnail[i] & 0xF0) >> 4; // high nibble
-            out[i * 8 + 7] = 0xFF;
-            out[i * 8 + 6] = thumbnail_color_map[color].blue;
-            out[i * 8 + 5] = thumbnail_color_map[color].green;
             out[i * 8 + 4] = thumbnail_color_map[color].red;
+            out[i * 8 + 5] = thumbnail_color_map[color].green;
+            out[i * 8 + 6] = thumbnail_color_map[color].blue;
+            out[i * 8 + 7] = 0xFF;
         }
         return out;
     }

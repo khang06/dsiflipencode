@@ -1,19 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LocalDebuggerCommandArguments>"C:\Users\Khang\Downloads\3DF519_0ACC27D4F49F3_000.ppm"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"H:\Github\dsiflipdecode\02.ppm"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerCommandArguments>"C:\Users\Khang\Downloads\3DF519_0ACC27D4F49F3_000.ppm"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"H:\Github\dsiflipdecode\02.ppm"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>"C:\Users\Khang\Downloads\3DF519_0ACC27D4F49F3_000.ppm"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"D:\Flipnote Player\I50CC2_0A4F942B160CB_001.ppm"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>"C:\Users\Khang\Downloads\3DF519_0ACC27D4F49F3_000.ppm"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"H:\Github\dsiflipdecode\02.ppm"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

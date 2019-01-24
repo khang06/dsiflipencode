@@ -18,9 +18,10 @@ namespace dsiflipdecode {
         void ParseFromFile(const char* path);
         std::pair<char*, size_t> DecodeFrame(uint32_t index);
         unsigned char* DecodeThumbnail();
-        std::pair<char*, size_t> DecodeBGM();
-        std::pair<char*, size_t> DecodeSE1();
-        std::pair<char*, size_t> DecodeSE2();
-        std::pair<char*, size_t> DecodeSE3();
+        std::pair<int16_t*, size_t> DecodeADPCM(const char* src, size_t src_size);
+        std::pair<int16_t*, size_t> DecodeBGM();
+        std::pair<int16_t*, size_t> DecodeSE1();
+        std::pair<int16_t*, size_t> DecodeSE2();
+        std::pair<int16_t*, size_t> DecodeSE3();
     };
 }

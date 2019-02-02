@@ -8,7 +8,7 @@ namespace dsiflipdecode {
         uint32_t anim_data_size;
         uint32_t sound_data_size;
         uint16_t frame_count;
-        INSERT_PADDING_BYTES(2);
+        uint16_t unk1;
         uint16_t locked;
         uint16_t thumbnail_frame_index;
         char16_t root_author_name[11];
@@ -21,14 +21,14 @@ namespace dsiflipdecode {
         char root_author_id[8];
         char partial_filename[8];
         uint32_t timestamp;
-        INSERT_PADDING_BYTES(2);
+        uint16_t unk2;
     } FileHeader;
     // size check is needed because raw bytes will be casted to this
     static_assert(sizeof(FileHeader) == 0xA0, "dsiflipdecode::FileHeader must be 0xA0 bytes long");
 
     typedef struct {
         uint16_t frame_offset_table_size;
-        INSERT_PADDING_BYTES(2);
+        uint16_t unk1;
         uint32_t flags;
     } AnimationSectionHeader;
     // size check is needed because raw bytes will be casted to this

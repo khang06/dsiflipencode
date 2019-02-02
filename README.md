@@ -1,4 +1,4 @@
 # dsiflipdecode
-crappy flipnote decoder written in c++ (that can only decode thumbnails for now)
+what a misleading project name
 
 before the copyright police murder me, this project uses https://github.com/ArashPartow/bitmap

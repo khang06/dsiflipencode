@@ -41,13 +41,13 @@ int main(int argc, char** argv) {
     constexpr rgb_t rgb_black = { 0, 0, 0 };
     std::vector<bitmap_image> input_frames;
     std::vector<bitmap_image> two_color_frames;
-    unsigned int frame_count = 2; // hardcoding this because doing it properly is too much work
+    unsigned int frame_count = 839; // hardcoding this because doing it properly is too much work
     std::vector<std::vector<char>> frame_data;
     std::vector<char> ppm_file;
 
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
         char formatted_filename[0x100]; // nobody will ever get past this limit...
-        snprintf(formatted_filename, 0x100, "frames/frame%d.bmp", frame);
+        snprintf(formatted_filename, 0x100, "frames/stage1_%d.bmp", frame);
         bitmap_image input(formatted_filename);
         if (!input) {
             printf("could not open %s\n", formatted_filename);
@@ -80,34 +80,50 @@ int main(int argc, char** argv) {
         two_color_frames.push_back(output);
     }
 
-    // debug purposes
-    size_t output_frame_count = two_color_frames.size();
-    for (size_t i = 0; i < output_frame_count; ++i) {
-        char formatted_filename[0x100];
-        snprintf(formatted_filename, 0x100, "output_twocolor%zd.bmp", i);
-        two_color_frames.at(i).save_image(formatted_filename);
-    }
-
     // time to actually start doing flipnote stuff
     // create the animation data first
     // only doing line type 0 (empty) and 1 (compressed bitmap)
+    char previous_frame[256 * 192];
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
+        char temp_frame[256 * 192];
+        char frame_to_encode[256 * 192];
         std::vector<char> encoded_frame;
         bitmap_image current_frame = two_color_frames.at(frame);
         unsigned char current_line_encoding_flags[192] = {}; // only layer 1 for now,
         // layer 2 will be blank
         unsigned char packed_line_encoding_flags[48] = {};
+        rgb_t pixel_color;
+        // convert the frame to something simpler so it's easier to work with
+        for (int y = 0; y < 192; ++y) {
+            for (int x = 0; x < 256; ++x) {
+                pixel_color = current_frame.get_pixel(x, y);
+                if (pixel_color == rgb_black)
+                    temp_frame[y * 256 + x] = 1;
+                else
+                    temp_frame[y * 256 + x] = 0;
+            }
+        }
 
-        // first, the frame header
+        if (frame == 0) { // first frame, don't do diffing
+            memcpy(frame_to_encode, temp_frame, 256 * 192);
+            memcpy(previous_frame, temp_frame, 256 * 192);
+        } else {
+            for (int i = 0; i < 256 * 192; ++i) {
+                frame_to_encode[i] = temp_frame[i] ^ previous_frame[i];
+            }
+            memcpy(previous_frame, temp_frame, 256 * 192);
+        }
+
+        // make the frame header
         char frame_header = 0;
         WRITETO(frame_header, 0, 1, 1); // white paper
         WRITETO(frame_header, 1, 1, 1); // layer 1 will be inverse of paper color
         WRITETO(frame_header, 3, 1, 1); // layer 2 too, but it won't matter
-        WRITETO(frame_header, 7, 1, 1); // always new frame (don't feel like doing diffing between frames)
+        if (frame == 0)
+            WRITETO(frame_header, 7, 1, 1); // new frame
         encoded_frame.push_back(frame_header);
 
         int line_type;
-        rgb_t pixel_color;
         int byte_index;
         int bit_index;
         // check if lines are blank or not, and write to line_encoding_flags
@@ -115,10 +131,7 @@ int main(int argc, char** argv) {
         for (unsigned int line = 0; line < 192; ++line) {
             line_type = 0; // empty
             for (unsigned int pixel = 0; pixel < 256; ++pixel) {
-                pixel_color = current_frame.get_pixel(pixel, line);
-                if (pixel_color == rgb_black) { // TODO: make this dynamic once i add
-                    // most-efficient paper color stuff
-                    // line_type = 3; // decompressed bitmap
+                if (frame_to_encode[line * 256 + pixel] == 1) {
                     line_type = 1; // compressed bitmap
                     break;
                 }
@@ -129,7 +142,7 @@ int main(int argc, char** argv) {
         // this could probably be merged into the above loop
         for (int line = 0; line < 192; ++line) {
             byte_index = line / 4; // 4 2-bit pixels per byte
-            bit_index = line % 4; // kind of a misleading name
+            bit_index = line % 4;
             switch (current_line_encoding_flags[line]) {
             case 0:
                 packed_line_encoding_flags[byte_index] &= ~(1UL << (bit_index * 2 + 1));
@@ -162,15 +175,6 @@ int main(int argc, char** argv) {
             encoded_frame.push_back(0); // layer 2 is blank
         }
 
-        // debug stuff
-        FILE* line_encoding_flags_file;
-        int file_ret = fopen_s(&line_encoding_flags_file, "line_encoding_debug.bin", "wb");
-        if (file_ret) {
-            printf("could not save line_encoding_debug.bin: %d\n", file_ret);
-        }
-        fwrite(packed_line_encoding_flags, 48, 1, line_encoding_flags_file);
-        fclose(line_encoding_flags_file);
-
         // time to encode the frame!
         for (unsigned int line = 0; line < 192; ++line) {
             switch (current_line_encoding_flags[line]) {
@@ -179,21 +183,13 @@ int main(int argc, char** argv) {
             case 1: // compressed bitmap
                 std::vector<char> chunks;
                 char used_chunks[32] = {};
-                char bmp_line[256];
                 unsigned int chunk_flag = 0;
                 unsigned int bit_index = 0; // 0 to 31
-
-                // convert the line to something more simple first
-                rgb_t pixel_color;
-                for (unsigned int pixel = 0; pixel < 256; ++pixel) {
-                    pixel_color = current_frame.get_pixel(pixel, line);
-                    pixel_color == rgb_white ? bmp_line[pixel] = 0 : bmp_line[pixel] = 1;
-                }
 
                 // first we need to figure out what chunks are used and write the chunk flag
                 for (unsigned int chunk = 0; chunk < 32; ++chunk) {
                     for (unsigned int pixel = 0; pixel < 8; ++pixel) {
-                        if (bmp_line[chunk * 8 + pixel]) {
+                        if (frame_to_encode[line * 256 + (chunk * 8 + pixel)]) {
                             used_chunks[chunk] = 1;
                             WRITETO(chunk_flag, 31 - chunk, 1, 1);
                             break;
@@ -213,7 +209,7 @@ int main(int argc, char** argv) {
                         continue;
                     char encoded_chunk = 0;
                     for (unsigned int pixel = 0; pixel < 8; ++pixel) {
-                        if (bmp_line[chunk * 8 + pixel]) {
+                        if (frame_to_encode[line * 256 + (chunk * 8 + pixel)]) {
                             WRITETO(encoded_chunk, pixel, 1, 1);
                         }
                     }
@@ -221,12 +217,6 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        FILE* why;
-        int who_cares_if_fopen_returns_null = fopen_s(&why, "frame_enc.bin", "wb");
-        if (who_cares_if_fopen_returns_null)
-            throw "FUCK";
-        fwrite(encoded_frame.data(), encoded_frame.size(), 1, why);
-        fclose(why);
 
         frame_data.push_back(encoded_frame);
     }
@@ -242,6 +232,7 @@ int main(int argc, char** argv) {
         frame_offset_table.push_back(current_offset);
         current_offset += frame_data.at(frame).size();
     }
+
     // sfadfsdffsffasfasdfasdf
     FILE* asdf;
     dsiflipdecode::FileHeader header;
@@ -264,7 +255,7 @@ int main(int argc, char** argv) {
     memcpy(header.parent_filename, "AAAAAAAAAAAAAAAAAA", 18);
     memcpy(header.current_filename, "AAAAAAAAAAAAAAAAAA", 18);
     memcpy(header.partial_filename, "AAAAAAAA", 8);
-    header.timestamp = 0x1337666;
+    header.timestamp = 2186972400;
     header.unk2 = 0;
     dsiflipdecode::AnimationSectionHeader anim_header;
     anim_header.frame_offset_table_size = frame_count * 4;
@@ -275,8 +266,8 @@ int main(int argc, char** argv) {
     sound_header.se1_size = 0;
     sound_header.se2_size = 0;
     sound_header.se3_size = 0;
-    sound_header.frame_speed = 1; // 0.5 fps
-    sound_header.bgm_frame_speed = 1;
+    sound_header.frame_speed = 0; // ??? fps
+    sound_header.bgm_frame_speed = 0;
     memset(sound_header.pad44, 0, 14);
 
     int aghhh = fopen_s(&asdf, "finalasdf.ppm", "wb");

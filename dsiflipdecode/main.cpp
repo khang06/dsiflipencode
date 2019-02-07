@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdio>
+#include <string>
 #include <intrin.h>
 #include "flipnote_parser.h"
 
@@ -14,19 +15,12 @@
 // this.
 // code.
 // sucks.
-template <class T>
-void write_whatever(FILE* file, T good_variable_name, int size) {
-    for (int i = 0; i < size; ++i) {
-        char temp = reinterpret_cast<char*>(&good_variable_name)[i];
-        fwrite(&temp, 1, 1, file);
-    }
-}
 
 template <class T>
 void write_whatever_ptr(FILE* file, T good_variable_name, int size) {
     for (int i = 0; i < size; ++i) {
         char temp = reinterpret_cast<char*>(good_variable_name)[i];
-        fwrite(&temp, 1, 1, file);
+        fputc(temp, file);
     }
 }
 
@@ -37,27 +31,68 @@ void write_zeros(FILE* file, int count) {
 }
 
 int main(int argc, char** argv) {
+    constexpr unsigned int frame_count = 6573; // hardcoding this because doing it properly is too much work
+    constexpr bool use_bgm = 1;
+    std::string directory = "data/badapplefull"; // only so i can concatenate
+    constexpr char fsid[8] = { 0xFA, 0x70, 0xBC, 0xA0, 0x00, 0xEB, 0x73, 0x54 }; // what shows on my dsi, but in reverse
+    constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x46, 0x31, 0x35, 0x39, 0x33, 0x30, 0x42, 0x35, 0x31, 0x30, 0x46, 0x00, 0x01 }; // don't know how this is generated
+    constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0xF1, 0x59, 0x30, 0xB5 }; // doesn't match above, even on real flipnotes
+    const wchar_t* author = L"Khang";
+
     constexpr rgb_t rgb_white = { 255, 255, 255 };
     constexpr rgb_t rgb_black = { 0, 0, 0 };
-    std::vector<bitmap_image> input_frames;
+    std::vector<bitmap_image>* input_frames = new std::vector<bitmap_image>; // only on heap so i can delete it
     std::vector<bitmap_image> two_color_frames;
-    unsigned int frame_count = 839; // hardcoding this because doing it properly is too much work
     std::vector<std::vector<char>> frame_data;
     std::vector<char> ppm_file;
+    std::vector<char> bgm;
+
+    if (use_bgm) {
+        // load the bgm, input should be already encoded to adpcm with ffmpeg
+        std::string bgm_path = directory + "/audio.wav";
+        FILE* bgm_file;
+        int bgm_err = fopen_s(&bgm_file, bgm_path.c_str(), "rb");
+        if (bgm_err)
+            throw "Failed to open audio.wav!";
+        fseek(bgm_file, 0, SEEK_END);
+        size_t bgm_size = ftell(bgm_file) - 0x5E; // don't want the header
+        rewind(bgm_file);
+        fseek(bgm_file, 0x5E, SEEK_SET);
+        for (size_t i = 0; i < bgm_size; ++i) {
+            char byte;
+            fread(&byte, 1, 1, bgm_file);
+            //bgm.push_back((byte & 0x0F) << 4 | (byte & 0xF0) >> 4);
+            bgm.push_back(byte);
+        }
+        fclose(bgm_file);
+    }
+
+    // load the thumbnail, expected size is 1536 or 0x600 bytes
+    std::string thumbnail_path = directory + "/thumbnail.bin";
+    FILE* thumbnail_file;
+    int thumbnail_err = fopen_s(&thumbnail_file, thumbnail_path.c_str(), "rb");
+    if (thumbnail_err)
+        throw "Failed to open thumbnail.bin!";
+    fseek(thumbnail_file, 0, SEEK_END);
+    if (ftell(thumbnail_file) != 0x600)
+        throw "thumbnail.bin isn't 0x600 bytes long!";
+    rewind(thumbnail_file);
 
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        char formatted_filename[0x100]; // nobody will ever get past this limit...
-        snprintf(formatted_filename, 0x100, "frames/stage1_%d.bmp", frame);
+        std::string frame_format = directory + "/frame_%d.bmp";
+        char formatted_filename[0x100]; // this should really be std::string
+        snprintf(formatted_filename, 0x100, frame_format.c_str(), frame);
         bitmap_image input(formatted_filename);
         if (!input) {
             printf("could not open %s\n", formatted_filename);
+            delete input_frames;
             return 1;
         }
-        input_frames.push_back(input);
+        input_frames->push_back(input);
     }
 
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        const bitmap_image current_frame = input_frames.at(frame);
+        const bitmap_image current_frame = input_frames->at(frame);
         const unsigned int height = current_frame.height();
         const unsigned int width = current_frame.width();
         bitmap_image output(width, height);
@@ -79,6 +114,7 @@ int main(int argc, char** argv) {
         }
         two_color_frames.push_back(output);
     }
+    delete input_frames;
 
     // time to actually start doing flipnote stuff
     // create the animation data first
@@ -118,7 +154,7 @@ int main(int argc, char** argv) {
         char frame_header = 0;
         WRITETO(frame_header, 0, 1, 1); // white paper
         WRITETO(frame_header, 1, 1, 1); // layer 1 will be inverse of paper color
-        WRITETO(frame_header, 3, 1, 1); // layer 2 too, but it won't matter
+        WRITETO(frame_header, 4, 1, 1); // layer 2 will be red, not that it really matters
         if (frame == 0)
             WRITETO(frame_header, 7, 1, 1); // new frame
         encoded_frame.push_back(frame_header);
@@ -238,7 +274,10 @@ int main(int argc, char** argv) {
     dsiflipdecode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
-    header.sound_data_size = 0;
+    if (use_bgm)
+        header.sound_data_size = bgm.size();
+    else
+        header.sound_data_size = 0;
     header.frame_count = frame_count - 1;
     header.unk1 = 0x24;
     header.locked = 1;
@@ -246,44 +285,53 @@ int main(int argc, char** argv) {
     memset(header.root_author_name, 0, 22);
     memset(header.parent_author_name, 0, 22);
     memset(header.current_author_name, 0, 22);
-    memcpy(header.root_author_name, L"Khangaroo", 18); // not using wcs whatever because we don't want that null terminator
-    memcpy(header.parent_author_name, L"Khangaroo", 18);
-    memcpy(header.current_author_name, L"Khangaroo", 18);
-    memcpy(header.parent_author_id, "AAAAAAAA", 8);
-    memcpy(header.current_author_id, "AAAAAAAA", 8);
-    memcpy(header.root_author_id, "AAAAAAAA", 8);
-    memcpy(header.parent_filename, "AAAAAAAAAAAAAAAAAA", 18);
-    memcpy(header.current_filename, "AAAAAAAAAAAAAAAAAA", 18);
-    memcpy(header.partial_filename, "AAAAAAAA", 8);
-    header.timestamp = 2186972400;
+    memcpy(header.root_author_name, author, wcslen(author) * 2 - 1); // not using wcs whatever because we don't want that null terminator
+    memcpy(header.parent_author_name, author, wcslen(author) * 2 - 1);
+    memcpy(header.current_author_name, author, wcslen(author) * 2 - 1);
+    memcpy(header.parent_author_id, fsid, 8);
+    memcpy(header.current_author_id, fsid, 8);
+    memcpy(header.root_author_id, fsid, 8);
+    memcpy(header.parent_filename, filename, 18);
+    memcpy(header.current_filename, filename, 18);
+    memcpy(header.partial_filename, partial_filename, 8);
+    header.timestamp = 602785704;
     header.unk2 = 0;
+
     dsiflipdecode::AnimationSectionHeader anim_header;
     anim_header.frame_offset_table_size = frame_count * 4;
     anim_header.unk1 = 0;
-    anim_header.flags = 0;
+    anim_header.flags = 0x410000; // no idea
+
     dsiflipdecode::SoundSectionHeader sound_header;
-    sound_header.bgm_size = 0;
+    if (use_bgm)
+        sound_header.bgm_size = bgm.size();
+    else
+        sound_header.bgm_size = 0;
     sound_header.se1_size = 0;
     sound_header.se2_size = 0;
     sound_header.se3_size = 0;
-    sound_header.frame_speed = 0; // ??? fps
+    sound_header.frame_speed = 0;
     sound_header.bgm_frame_speed = 0;
     memset(sound_header.pad44, 0, 14);
 
-    int aghhh = fopen_s(&asdf, "finalasdf.ppm", "wb");
+    int aghhh = fopen_s(&asdf, "KC70FA_11F15930B510F_001.ppm", "wb");
     if (aghhh) {
         printf("%d", aghhh);
         throw "WHYYYYYY";
     }
     // write ppm header
-    write_whatever(asdf, header, sizeof(header));
-    // write thumbnail (blank for now)
-    write_zeros(asdf, 0x600);
+    write_whatever_ptr(asdf, &header, sizeof(header));
+    // write thumbnail
+    for (int i = 0; i < 0x600; ++i) {
+        char byte;
+        fread(&byte, 1, 1, thumbnail_file);
+        fputc(byte, asdf);
+    }
     // write animation section header
-    write_whatever(asdf, anim_header, sizeof(anim_header));
+    write_whatever_ptr(asdf, &anim_header, sizeof(anim_header));
     // write frame offset table
     for (int i = 0; i < frame_offset_table.size(); ++i) {
-        write_whatever(asdf, frame_offset_table.at(i), 4);
+        write_whatever_ptr(asdf, &frame_offset_table.at(i), 4);
     }
     // write frame data
     for (int frame = 0; frame < frame_data.size(); ++frame) {
@@ -293,10 +341,13 @@ int main(int argc, char** argv) {
     write_zeros(asdf, frame_count);
     // needs to be aligned to 4 bytes now
     int align_size = 4 - ((0x6A0 + header.anim_data_size + frame_count) % 4);
-    write_zeros(asdf, align_size);
+    if (align_size != 4)
+        write_zeros(asdf, align_size);
     // write sound header
-    write_whatever(asdf, sound_header, sizeof(sound_header));
-    // no sound data for now...
+    write_whatever_ptr(asdf, &sound_header, sizeof(sound_header));
+    // write bgm (no sound effects for now...)
+    if (use_bgm)
+        write_whatever_ptr(asdf, bgm.data(), bgm.size());
     // write dummy signature
     write_zeros(asdf, 0x80);
     // write padding

@@ -351,7 +351,10 @@ int main(int argc, char** argv) {
     // write dummy signature
     write_zeros(asdf, 0x80);
     // write padding
-    write_zeros(asdf, 0x10);
+    write_zeros(asdf, 0xF);
+    // this last part is part of the above padding, but all flipnotes encoded with this program should have this byte set
+    // very easy to bypass, but at least i put some thought here :)
+    fputc(1, asdf);
     fclose(asdf);
     return 0;
 }

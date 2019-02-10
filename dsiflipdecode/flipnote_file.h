@@ -8,7 +8,7 @@ namespace dsiflipdecode {
         uint32_t anim_data_size;
         uint32_t sound_data_size;
         uint16_t frame_count;
-        uint16_t unk1;
+        uint16_t version;
         uint16_t locked;
         uint16_t thumbnail_frame_index;
         char16_t root_author_name[11];

@@ -1511,7 +1511,7 @@ private:
 
       if (!stream)
       {
-         std::cerr << "bitmap_image::load_bitmap() ERROR: bitmap_image - file " << file_name_ << " not found!" << std::endl;
+         //std::cerr << "bitmap_image::load_bitmap() ERROR: bitmap_image - file " << file_name_ << " not found!" << std::endl;
          return;
       }
 

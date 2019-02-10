@@ -1,16 +1,19 @@
 #include <array>
 #include <cstdio>
 #include <deque>
-#include <iostream>
-#include <string>
 #include <intrin.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 #include "flipnote_file.h"
 #include "bitmap_image.hpp"
+#include "INIReader.h"
 
 // this code sucks. this code sucks. this code sucks. this code sucks.
 // this.
 // code.
 // sucks.
+// but it sucks a bit less now :)
 
 template <class T>
 void write_whatever_ptr(FILE* file, T good_variable_name, int size) {
@@ -26,25 +29,28 @@ void write_zeros(FILE* file, int count) {
     }
 }
 
-int encode(std::string data_dir) {
-    constexpr unsigned int frame_count = 839; // hardcoding this because doing it properly is too much work
-    constexpr bool use_bgm = 1;
-    constexpr char fsid[8] = { 0xFA, 0x70, 0xBC, 0xA0, 0x00, 0xEB, 0x73, 0x54 }; // what shows on my dsi, but in reverse
-    constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x32, 0x41, 0x38, 0x39, 0x36, 0x36, 0x42, 0x33, 0x37, 0x38, 0x39, 0x00, 0x00 }; // don't know how this is generated
-    constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0x2A, 0x89, 0x66, 0xB3 }; // doesn't match above, even on real flipnotes
-    const wchar_t* author = L"Khang";
+class EncoderSettings {
+public:
+    std::string data_dir;
+    std::array<uint8_t, 8> fsid;
+    std::array<uint8_t, 8> filename;
+    std::array<uint8_t, 8> partial_filename;
+    std::u16string author;
+    bool use_bgm;
+    uint32_t timestamp;
+};
 
+int encode(EncoderSettings settings) {
     constexpr rgb_t rgb_white = { 255, 255, 255 };
     constexpr rgb_t rgb_black = { 0, 0, 0 };
-    std::deque<bitmap_image>* input_frames = new std::deque<bitmap_image>; // only on heap so i can delete it
-    std::vector<bitmap_image> two_color_frames;
     std::vector<std::vector<char>> frame_data;
     std::vector<char> bgm;
+    unsigned int frame_count = 0;
 
-    std::cout << "Stage 0: Load BGM, thumbnail, and frames" << std::endl;
-    if (use_bgm) {
+    std::cout << "Loading BGM..." << std::endl;
+    if (settings.use_bgm) {
         // load the bgm, input should be already encoded to adpcm with ffmpeg
-        std::string bgm_path = data_dir + "/audio.wav";
+        std::string bgm_path = settings.data_dir + "/audio.wav";
         FILE* bgm_file;
         int bgm_err = fopen_s(&bgm_file, bgm_path.c_str(), "rb");
         if (bgm_err)
@@ -63,7 +69,8 @@ int encode(std::string data_dir) {
     }
 
     // load the thumbnail, expected size is 1536 or 0x600 bytes
-    std::string thumbnail_path = data_dir + "/thumbnail.bin";
+    std::cout << "Loading thumbnail..." << std::endl;
+    std::string thumbnail_path = settings.data_dir + "/thumbnail.bin";
     FILE* thumbnail_file;
     int thumbnail_err = fopen_s(&thumbnail_file, thumbnail_path.c_str(), "rb");
     if (thumbnail_err)
@@ -73,65 +80,46 @@ int encode(std::string data_dir) {
         throw "thumbnail.bin isn't 0x600 bytes long!";
     rewind(thumbnail_file);
 
-    for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        std::string frame_format = data_dir + "/frame_%d.bmp";
-        char formatted_filename[0x100]; // this should really be std::string
-        snprintf(formatted_filename, 0x100, frame_format.c_str(), frame);
-        bitmap_image input(formatted_filename);
+    std::cout << "Getting frame count..." << std::endl;
+    for (unsigned int frame = 0; ; ++frame) {
+        std::stringstream frame_filename;
+        frame_filename << settings.data_dir << "/frame_" << frame << ".bmp";
+        FILE* input = fopen(frame_filename.str().c_str(), "rb");
         if (!input) {
-            printf("could not open %s\n", formatted_filename);
-            delete input_frames;
-            return 1;
+            break;
         }
-        input_frames->push_back(input);
+        fclose(input);
+        ++frame_count;
     }
-
-    std::cout << "Stage 1: Convert frames to 2 color" << std::endl;
-    for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        const bitmap_image current_frame = input_frames->front();
-        const unsigned int height = current_frame.height();
-        const unsigned int width = current_frame.width();
-        bitmap_image output(width, height);
-
-        // convert the image to 2 colors
-        unsigned int red_amount;
-        for (unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
-                // only reading the red channel since the expected input would be
-                // greyscale
-                red_amount = current_frame.get_pixel(x, y).red;
-                if (red_amount > 127) {
-                    output.set_pixel(x, y, rgb_white);
-                }
-                else {
-                    output.set_pixel(x, y, rgb_black);
-                }
-            }
-        }
-        two_color_frames.push_back(output);
-        input_frames->pop_front();
-    }
-    delete input_frames;
+    if (frame_count == 0)
+        throw "Couldn't find any frames! Did you remember a frame_0?";
 
     // time to actually start doing flipnote stuff
     // create the animation data first
     // only doing line type 0 (empty) and 1 (compressed bitmap)
-    std::cout << "Stage 2: Encode frames" << std::endl;
+    // TODO: implement 2 and 3
+    std::cout << "Encoding frames..." << std::endl;
     char previous_frame[256 * 192];
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
         char temp_frame[256 * 192];
         char frame_to_encode[256 * 192];
         std::vector<char> encoded_frame;
-        bitmap_image current_frame = two_color_frames.at(frame);
         unsigned char current_line_encoding_flags[192] = {}; // only layer 1 for now,
         // layer 2 will be blank
         unsigned char packed_line_encoding_flags[48] = {};
         rgb_t pixel_color;
+
+        std::stringstream frame_filename;
+        frame_filename << settings.data_dir << "/frame_" << frame << ".bmp";
+        bitmap_image current_frame(frame_filename.str().c_str());
+        if (!current_frame)
+            throw "Failed to load a frame!"; // TODO: make exceptions std::string so this can be better
+
         // convert the frame to something simpler so it's easier to work with
         for (int y = 0; y < 192; ++y) {
             for (int x = 0; x < 256; ++x) {
                 pixel_color = current_frame.get_pixel(x, y);
-                if (pixel_color == rgb_black)
+                if (pixel_color.red < 127) // input is expected to be greyscale
                     temp_frame[y * 256 + x] = 1;
                 else
                     temp_frame[y * 256 + x] = 0;
@@ -153,7 +141,7 @@ int encode(std::string data_dir) {
         WRITETO(frame_header, 0, 1, 1); // white paper
         WRITETO(frame_header, 1, 1, 1); // layer 1 will be inverse of paper color
         WRITETO(frame_header, 4, 1, 1); // layer 2 will be red, not that it really matters
-        //if (frame == 0)
+        if (frame == 0)
             WRITETO(frame_header, 7, 1, 1); // new frame
         encoded_frame.push_back(frame_header);
 
@@ -179,24 +167,16 @@ int encode(std::string data_dir) {
             bit_index = line % 4;
             switch (current_line_encoding_flags[line]) {
             case 0:
-                packed_line_encoding_flags[byte_index] &= ~(1UL << (bit_index * 2 + 1));
-                packed_line_encoding_flags[byte_index] &= ~(1UL << (bit_index * 2));
-                //WRITETO(packed_line_encoding_flags[byte_index], bit_index, 2, 0);
+                WRITETO(packed_line_encoding_flags[byte_index], bit_index * 2, 2, 0);
                 break;
             case 1:
-                packed_line_encoding_flags[byte_index] &= ~(1UL << (bit_index * 2 + 1));
-                packed_line_encoding_flags[byte_index] |= 1UL << (bit_index * 2);
-                //WRITETO(packed_line_encoding_flags[byte_index], bit_index, 2, 1);
+                WRITETO(packed_line_encoding_flags[byte_index], bit_index * 2, 2, 1);
                 break;
             case 2:
-                packed_line_encoding_flags[byte_index] |= 1UL << (bit_index * 2 + 1);
-                packed_line_encoding_flags[byte_index] &= ~(1UL << (bit_index * 2));
-                //WRITETO(packed_line_encoding_flags[byte_index], bit_index, 2, 2);
+                WRITETO(packed_line_encoding_flags[byte_index], bit_index * 2, 2, 2);
                 break;
             case 3:
-                packed_line_encoding_flags[byte_index] |= 1UL << (bit_index * 2 + 1);
-                packed_line_encoding_flags[byte_index] |= 1UL << (bit_index * 2);
-                //WRITETO(packed_line_encoding_flags[byte_index], bit_index, 2, 3);
+                WRITETO(packed_line_encoding_flags[byte_index], bit_index * 2, 2, 3);
                 break;
             default:
                 printf("wtf\n");
@@ -267,32 +247,34 @@ int encode(std::string data_dir) {
         current_offset += frame_data.at(frame).size();
     }
 
-    std::cout << "Stage 3: Write PPM to file" << std::endl;
+    std::cout << "Writing PPM..." << std::endl;
     FILE* ppm_file;
     dsiflipdecode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
-    if (use_bgm)
+    if (settings.use_bgm)
         header.sound_data_size = bgm.size();
     else
         header.sound_data_size = 0;
     header.frame_count = frame_count - 1;
-    header.unk1 = 0x24;
+    header.version = 0x24;
     header.locked = 1;
     header.thumbnail_frame_index = 0;
     memset(header.root_author_name, 0, 22);
     memset(header.parent_author_name, 0, 22);
     memset(header.current_author_name, 0, 22);
-    memcpy(header.root_author_name, author, wcslen(author) * 2 - 1); // not using wcs whatever because we don't want that null terminator
-    memcpy(header.parent_author_name, author, wcslen(author) * 2 - 1);
-    memcpy(header.current_author_name, author, wcslen(author) * 2 - 1);
-    memcpy(header.parent_author_id, fsid, 8);
-    memcpy(header.current_author_id, fsid, 8);
-    memcpy(header.root_author_id, fsid, 8);
-    memcpy(header.parent_filename, filename, 18);
-    memcpy(header.current_filename, filename, 18);
-    memcpy(header.partial_filename, partial_filename, 8);
-    header.timestamp = 602785704;
+    memcpy(header.root_author_name, settings.author.c_str(), settings.author.length() * 2 - 1); // we don't want the null terminator
+    memcpy(header.parent_author_name, settings.author.c_str(), settings.author.length() * 2 - 1);
+    memcpy(header.current_author_name, settings.author.c_str(), settings.author.length() * 2 - 1);
+    std::array<uint8_t, 8> reversed_fsid = settings.fsid;
+    std::reverse(reversed_fsid.begin(), reversed_fsid.end());
+    memcpy(header.parent_author_id, reversed_fsid.data(), 8);
+    memcpy(header.current_author_id, reversed_fsid.data(), 8);
+    memcpy(header.root_author_id, reversed_fsid.data(), 8);
+    memcpy(header.parent_filename, settings.filename.data() , 18);
+    memcpy(header.current_filename, settings.filename.data(), 18);
+    memcpy(header.partial_filename, settings.partial_filename.data(), 8);
+    header.timestamp = settings.timestamp;
     header.unk2 = 0;
 
     dsiflipdecode::AnimationSectionHeader anim_header;
@@ -301,7 +283,7 @@ int encode(std::string data_dir) {
     anim_header.flags = 0x410000; // no idea
 
     dsiflipdecode::SoundSectionHeader sound_header;
-    if (use_bgm)
+    if (settings.use_bgm)
         sound_header.bgm_size = bgm.size();
     else
         sound_header.bgm_size = 0;
@@ -313,7 +295,19 @@ int encode(std::string data_dir) {
     sound_header.encoded = 1;
     memset(sound_header.pad45, 0, 13);
 
-    int ppm_errcode = fopen_s(&ppm_file, "AC70FA_112A8966B3789_000.ppm", "wb");
+    // https://stackoverflow.com/questions/7639656/getting-a-buffer-into-a-stringstream-in-hex-representation/
+    std::stringstream ppm_filename;
+    ppm_filename << std::hex << std::setfill('0');
+    for (int i = 0; i < 3; ++i) {
+        ppm_filename << std::uppercase << std::setw(2) << static_cast<unsigned>(settings.fsid[i + 5]);
+    }
+    ppm_filename << "_";
+    for (int i = 0; i < 8; ++i) {
+        ppm_filename << std::uppercase << std::setw(2) << static_cast<unsigned>(settings.filename[i]);
+    }
+    ppm_filename << ".ppm";
+
+    int ppm_errcode = fopen_s(&ppm_file, ppm_filename.str().insert(20, "_").c_str() , "wb");
     if (ppm_errcode) {
         throw "Could not open output file!";
     }
@@ -344,7 +338,7 @@ int encode(std::string data_dir) {
     // write sound header
     write_whatever_ptr(ppm_file, &sound_header, sizeof(sound_header));
     // write bgm (no sound effects for now...)
-    if (use_bgm)
+    if (settings.use_bgm)
         write_whatever_ptr(ppm_file, bgm.data(), bgm.size());
     // write dummy signature
     write_zeros(ppm_file, 0x80);
@@ -356,16 +350,56 @@ int encode(std::string data_dir) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "you need to provide a data directory";
+        std::cout << "You need to provide a data directory!";
         return 1;
     }
+    
+    const std::string data_dir(argv[1]);
+    INIReader reader(data_dir + "/config.ini");
+    EncoderSettings settings;
+    // https://stackoverflow.com/questions/7153935/how-to-convert-utf-8-stdstring-to-utf-16-stdwstring
+    std::string filename;
+    std::string fsid;
+    std::string partial_filename;
+    std::vector<uint8_t> filename_vector;
+    std::vector<uint8_t> fsid_vector;
+    std::vector<uint8_t> partial_filename_vector;
+
+    if (reader.ParseError() > 0) {
+        std::cout << "Failed to parse " << data_dir << "/config.ini!" << std::endl;
+        return 3;
+    }
+
+    filename = reader.Get("", "filename", "116AE34C2880B000");
+    fsid = reader.Get("", "fsid", "5473EB00A0BC70FA");
+    partial_filename = reader.Get("", "partial_filename", "BC70FA116AE34C28");
+
+    filename_vector = Util::HexStringToVector(filename, true);
+    fsid_vector = Util::HexStringToVector(fsid, true);
+    partial_filename_vector = Util::HexStringToVector(partial_filename, true);
+
+    // https://stackoverflow.com/questions/21276889/copy-stdvector-into-stdarray
+    std::copy_n(filename_vector.begin(), 8, settings.filename.begin());
+    std::copy_n(fsid_vector.begin(), 8, settings.fsid.begin());
+    std::copy_n(partial_filename_vector.begin(), 8, settings.partial_filename.begin());
+
+    settings.author = u"thx msvc"; // fucking visual studio couldn't and still can't use std::codecvt without failing to link since vs2015 and none of the workarounds on stackoverflow worked and i'm just so fucking tired of this shit and that's why this is hardcoded
+    settings.data_dir = data_dir;
+    settings.use_bgm = reader.GetBoolean("", "use_bgm", true);
+
+    uint64_t unix_timestamp = std::stoul(reader.Get("", "timestamp", "3133684800"));
+    if (unix_timestamp > UINT32_MAX + static_cast<uint64_t>(946684800)) {
+        std::cout << "Timestamp is too large!" << std::endl;
+        return 4;
+    }
+    settings.timestamp = unix_timestamp - 946684800;
+
     try {
-        std::string data_dir(argv[1]);
-        encode(data_dir);
+        encode(settings);
         return 0;
     }
     catch(const char* e) {
-        std::cout << "encoder threw an exception: " << e << std::endl;
+        std::cout << "Encoder threw an exception: " << e << std::endl;
         return 2;
     }
 }

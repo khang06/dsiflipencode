@@ -39,7 +39,6 @@ int encode(std::string data_dir) {
     std::deque<bitmap_image>* input_frames = new std::deque<bitmap_image>; // only on heap so i can delete it
     std::vector<bitmap_image> two_color_frames;
     std::vector<std::vector<char>> frame_data;
-    std::vector<char> ppm_file;
     std::vector<char> bgm;
 
     std::cout << "Stage 0: Load BGM, thumbnail, and frames" << std::endl;
@@ -268,9 +267,8 @@ int encode(std::string data_dir) {
         current_offset += frame_data.at(frame).size();
     }
 
-    // sfadfsdffsffasfasdfasdf
     std::cout << "Stage 3: Write PPM to file" << std::endl;
-    FILE* asdf;
+    FILE* ppm_file;
     dsiflipdecode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
@@ -315,45 +313,44 @@ int encode(std::string data_dir) {
     sound_header.encoded = 1;
     memset(sound_header.pad45, 0, 13);
 
-    int aghhh = fopen_s(&asdf, "AC70FA_112A8966B3789_000.ppm", "wb");
-    if (aghhh) {
-        printf("%d", aghhh);
-        throw "WHYYYYYY";
+    int ppm_errcode = fopen_s(&ppm_file, "AC70FA_112A8966B3789_000.ppm", "wb");
+    if (ppm_errcode) {
+        throw "Could not open output file!";
     }
     // write ppm header
-    write_whatever_ptr(asdf, &header, sizeof(header));
+    write_whatever_ptr(ppm_file, &header, sizeof(header));
     // write thumbnail
     for (int i = 0; i < 0x600; ++i) {
         char byte;
         fread(&byte, 1, 1, thumbnail_file);
-        fputc(byte, asdf);
+        fputc(byte, ppm_file);
     }
     // write animation section header
-    write_whatever_ptr(asdf, &anim_header, sizeof(anim_header));
+    write_whatever_ptr(ppm_file, &anim_header, sizeof(anim_header));
     // write frame offset table
     for (int i = 0; i < frame_offset_table.size(); ++i) {
-        write_whatever_ptr(asdf, &frame_offset_table.at(i), 4);
+        write_whatever_ptr(ppm_file, &frame_offset_table.at(i), 4);
     }
     // write frame data
     for (int frame = 0; frame < frame_data.size(); ++frame) {
-        write_whatever_ptr(asdf, frame_data.at(frame).data(), frame_data.at(frame).size());
+        write_whatever_ptr(ppm_file, frame_data.at(frame).data(), frame_data.at(frame).size());
     }
     // write sound effect usage flags
-    write_zeros(asdf, frame_count);
+    write_zeros(ppm_file, frame_count);
     // needs to be aligned to 4 bytes now
     int align_size = 4 - ((0x6A0 + header.anim_data_size + frame_count) % 4);
     if (align_size != 4)
-        write_zeros(asdf, align_size);
+        write_zeros(ppm_file, align_size);
     // write sound header
-    write_whatever_ptr(asdf, &sound_header, sizeof(sound_header));
+    write_whatever_ptr(ppm_file, &sound_header, sizeof(sound_header));
     // write bgm (no sound effects for now...)
     if (use_bgm)
-        write_whatever_ptr(asdf, bgm.data(), bgm.size());
+        write_whatever_ptr(ppm_file, bgm.data(), bgm.size());
     // write dummy signature
-    write_zeros(asdf, 0x80);
+    write_zeros(ppm_file, 0x80);
     // write padding
-    write_zeros(asdf, 0x10);
-    fclose(asdf);
+    write_zeros(ppm_file, 0x10);
+    fclose(ppm_file);
     return 0;
 }
 
@@ -367,8 +364,8 @@ int main(int argc, char** argv) {
         encode(data_dir);
         return 0;
     }
-    catch(std::string e) {
-        std::cout << e << std::endl;
+    catch(const char* e) {
+        std::cout << "encoder threw an exception: " << e << std::endl;
         return 2;
     }
 }

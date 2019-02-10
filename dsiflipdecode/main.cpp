@@ -47,8 +47,8 @@ int encode(EncoderSettings settings) {
     std::vector<char> bgm;
     unsigned int frame_count = 0;
 
-    std::cout << "Loading BGM..." << std::endl;
     if (settings.use_bgm) {
+    std::cout << "Loading BGM..." << std::endl;
         // load the bgm, input should be already encoded to adpcm with ffmpeg
         std::string bgm_path = settings.data_dir + "/audio.wav";
         FILE* bgm_file;
@@ -93,6 +93,7 @@ int encode(EncoderSettings settings) {
     }
     if (frame_count == 0)
         throw "Couldn't find any frames! Did you remember a frame_0?";
+    std::cout << frame_count << " frames" << std::endl;
 
     // time to actually start doing flipnote stuff
     // create the animation data first
@@ -271,8 +272,15 @@ int encode(EncoderSettings settings) {
     memcpy(header.parent_author_id, reversed_fsid.data(), 8);
     memcpy(header.current_author_id, reversed_fsid.data(), 8);
     memcpy(header.root_author_id, reversed_fsid.data(), 8);
-    memcpy(header.parent_filename, settings.filename.data() , 18);
-    memcpy(header.current_filename, settings.filename.data(), 18);
+    std::stringstream filename_hex;
+    filename_hex << std::hex << std::setfill('0');
+    for (int i = 0; i < 8; ++i) {
+        filename_hex << std::uppercase << std::setw(2) << static_cast<unsigned>(settings.filename[i]);
+    }
+    // yes, the filenames really are internally stored in this way
+    memcpy(header.parent_filename, settings.fsid.data() + 5, 3);
+    memcpy(header.parent_filename + 3, filename_hex.str().c_str(), 13);
+    memcpy(header.current_filename, header.parent_filename, 18);
     memcpy(header.partial_filename, settings.partial_filename.data(), 8);
     header.timestamp = settings.timestamp;
     header.unk2 = 0;
@@ -344,6 +352,8 @@ int encode(EncoderSettings settings) {
     write_zeros(ppm_file, 0x80);
     // write padding
     write_zeros(ppm_file, 0x10);
+    if (ftell(ppm_file) > 1024000)
+        std::cout << "The PPM file is over 1MB, so it might not load on a real DSi." << std::endl;
     fclose(ppm_file);
     return 0;
 }

@@ -7,13 +7,6 @@
 #include "flipnote_file.h"
 #include "bitmap_image.hpp"
 
-// https://stackoverflow.com/questions/11815894/how-to-read-write-arbitrary-bits-in-c-c
-#define GETMASK(index, size) (((1 << (size)) - 1) << (index))
-#define READFROM(data, index, size) \
-    (((data)&GETMASK((index), (size))) >> (index))
-#define WRITETO(data, index, size, value) \
-    ((data) = ((data) & (~GETMASK((index), (size)))) | ((value) << (index)))
-
 // this code sucks. this code sucks. this code sucks. this code sucks.
 // this.
 // code.
@@ -34,9 +27,9 @@ void write_zeros(FILE* file, int count) {
 }
 
 int encode() {
-    constexpr unsigned int frame_count = 6573; // hardcoding this because doing it properly is too much work
+    constexpr unsigned int frame_count = 839; // hardcoding this because doing it properly is too much work
     constexpr bool use_bgm = 1;
-    std::string directory = "data/badapplefull"; // only so i can concatenate
+    std::string directory = "data/androidswinning"; // only so i can concatenate
     constexpr char fsid[8] = { 0xFA, 0x70, 0xBC, 0xA0, 0x00, 0xEB, 0x73, 0x54 }; // what shows on my dsi, but in reverse
     constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x32, 0x41, 0x38, 0x39, 0x36, 0x36, 0x42, 0x33, 0x37, 0x38, 0x39, 0x00, 0x00 }; // don't know how this is generated
     constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0x2A, 0x89, 0x66, 0xB3 }; // doesn't match above, even on real flipnotes

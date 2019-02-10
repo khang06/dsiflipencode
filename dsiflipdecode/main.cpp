@@ -4,7 +4,8 @@
 #include <iostream>
 #include <string>
 #include <intrin.h>
-#include "flipnote_parser.h"
+#include "flipnote_file.h"
+#include "bitmap_image.hpp"
 
 // https://stackoverflow.com/questions/11815894/how-to-read-write-arbitrary-bits-in-c-c
 #define GETMASK(index, size) (((1 << (size)) - 1) << (index))

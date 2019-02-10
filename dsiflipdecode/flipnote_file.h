@@ -47,20 +47,4 @@ namespace dsiflipdecode {
     // size check is needed because raw bytes will be casted to this
     static_assert(sizeof(SoundSectionHeader) == 0x20, "dsiflipdecode::SoundSectionHeader must be 0x8 bytes long");
     #pragma pack(pop)
-
-    // i don't think i can cast to something like this, so it's a class
-    class FlipnoteFile {
-    public:
-        FileHeader header;
-        char* thumbnail;
-        AnimationSectionHeader anim_header;
-        uint32_t* frame_offset_table;
-        char* anim_data;
-        char* sound_effect_flags;
-        SoundSectionHeader sound_header;
-        char* bgm_data;
-        char* se1_data;
-        char* se2_data;
-        char* se3_data;
-    };
 }

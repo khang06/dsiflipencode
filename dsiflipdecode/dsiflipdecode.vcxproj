@@ -151,15 +151,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="adpcm.cpp" />
-    <ClCompile Include="flipnote_parser.cpp" />
-    <ClCompile Include="flipnote_parser_audio.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitmap_image.hpp" />
     <ClInclude Include="flipnote_file.h" />
-    <ClInclude Include="flipnote_parser.h" />
     <ClInclude Include="adpcm.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>

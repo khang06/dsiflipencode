@@ -41,25 +41,10 @@ namespace dsiflipdecode {
         uint32_t se3_size;
         uint8_t frame_speed;
         uint8_t bgm_frame_speed;
-        INSERT_PADDING_BYTES(14);
+        uint8_t encoded; // encoder-exclusive flag for encoded flipnote detection
+        INSERT_PADDING_BYTES(13);
     } SoundSectionHeader;
     // size check is needed because raw bytes will be casted to this
     static_assert(sizeof(SoundSectionHeader) == 0x20, "dsiflipdecode::SoundSectionHeader must be 0x8 bytes long");
     #pragma pack(pop)
-
-    // i don't think i can cast to something like this, so it's a class
-    class FlipnoteFile {
-    public:
-        FileHeader header;
-        char* thumbnail;
-        AnimationSectionHeader anim_header;
-        uint32_t* frame_offset_table;
-        char* anim_data;
-        char* sound_effect_flags;
-        SoundSectionHeader sound_header;
-        char* bgm_data;
-        char* se1_data;
-        char* se2_data;
-        char* se3_data;
-    };
 }

@@ -1,8 +1,11 @@
 #include <array>
 #include <cstdio>
+#include <deque>
+#include <iostream>
 #include <string>
 #include <intrin.h>
-#include "flipnote_parser.h"
+#include "flipnote_file.h"
+#include "bitmap_image.hpp"
 
 // https://stackoverflow.com/questions/11815894/how-to-read-write-arbitrary-bits-in-c-c
 #define GETMASK(index, size) (((1 << (size)) - 1) << (index))
@@ -30,23 +33,24 @@ void write_zeros(FILE* file, int count) {
     }
 }
 
-int main(int argc, char** argv) {
+int encode() {
     constexpr unsigned int frame_count = 6573; // hardcoding this because doing it properly is too much work
     constexpr bool use_bgm = 1;
     std::string directory = "data/badapplefull"; // only so i can concatenate
     constexpr char fsid[8] = { 0xFA, 0x70, 0xBC, 0xA0, 0x00, 0xEB, 0x73, 0x54 }; // what shows on my dsi, but in reverse
-    constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x46, 0x31, 0x35, 0x39, 0x33, 0x30, 0x42, 0x35, 0x31, 0x30, 0x46, 0x00, 0x01 }; // don't know how this is generated
-    constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0xF1, 0x59, 0x30, 0xB5 }; // doesn't match above, even on real flipnotes
+    constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x32, 0x41, 0x38, 0x39, 0x36, 0x36, 0x42, 0x33, 0x37, 0x38, 0x39, 0x00, 0x00 }; // don't know how this is generated
+    constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0x2A, 0x89, 0x66, 0xB3 }; // doesn't match above, even on real flipnotes
     const wchar_t* author = L"Khang";
 
     constexpr rgb_t rgb_white = { 255, 255, 255 };
     constexpr rgb_t rgb_black = { 0, 0, 0 };
-    std::vector<bitmap_image>* input_frames = new std::vector<bitmap_image>; // only on heap so i can delete it
+    std::deque<bitmap_image>* input_frames = new std::deque<bitmap_image>; // only on heap so i can delete it
     std::vector<bitmap_image> two_color_frames;
     std::vector<std::vector<char>> frame_data;
     std::vector<char> ppm_file;
     std::vector<char> bgm;
 
+    std::cout << "Stage 0: Load BGM, thumbnail, and frames" << std::endl;
     if (use_bgm) {
         // load the bgm, input should be already encoded to adpcm with ffmpeg
         std::string bgm_path = directory + "/audio.wav";
@@ -91,8 +95,9 @@ int main(int argc, char** argv) {
         input_frames->push_back(input);
     }
 
+    std::cout << "Stage 1: Convert frames to 2 color" << std::endl;
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        const bitmap_image current_frame = input_frames->at(frame);
+        const bitmap_image current_frame = input_frames->front();
         const unsigned int height = current_frame.height();
         const unsigned int width = current_frame.width();
         bitmap_image output(width, height);
@@ -113,12 +118,14 @@ int main(int argc, char** argv) {
             }
         }
         two_color_frames.push_back(output);
+        input_frames->pop_front();
     }
     delete input_frames;
 
     // time to actually start doing flipnote stuff
     // create the animation data first
     // only doing line type 0 (empty) and 1 (compressed bitmap)
+    std::cout << "Stage 2: Encode frames" << std::endl;
     char previous_frame[256 * 192];
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
         char temp_frame[256 * 192];
@@ -155,7 +162,7 @@ int main(int argc, char** argv) {
         WRITETO(frame_header, 0, 1, 1); // white paper
         WRITETO(frame_header, 1, 1, 1); // layer 1 will be inverse of paper color
         WRITETO(frame_header, 4, 1, 1); // layer 2 will be red, not that it really matters
-        if (frame == 0)
+        //if (frame == 0)
             WRITETO(frame_header, 7, 1, 1); // new frame
         encoded_frame.push_back(frame_header);
 
@@ -270,6 +277,7 @@ int main(int argc, char** argv) {
     }
 
     // sfadfsdffsffasfasdfasdf
+    std::cout << "Stage 3: Write PPM to file" << std::endl;
     FILE* asdf;
     dsiflipdecode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
@@ -312,9 +320,10 @@ int main(int argc, char** argv) {
     sound_header.se3_size = 0;
     sound_header.frame_speed = 0;
     sound_header.bgm_frame_speed = 0;
-    memset(sound_header.pad44, 0, 14);
+    sound_header.encoded = 1;
+    memset(sound_header.pad45, 0, 13);
 
-    int aghhh = fopen_s(&asdf, "KC70FA_11F15930B510F_001.ppm", "wb");
+    int aghhh = fopen_s(&asdf, "AC70FA_112A8966B3789_000.ppm", "wb");
     if (aghhh) {
         printf("%d", aghhh);
         throw "WHYYYYYY";
@@ -355,3 +364,17 @@ int main(int argc, char** argv) {
     fclose(asdf);
     return 0;
 }
+<<<<<<< HEAD
+=======
+
+int main(int argc, char** argv) {
+    try {
+        encode();
+        return 0;
+    }
+    catch(std::string e) {
+        std::cout << e << std::endl;
+        return 1;
+    }
+}
+>>>>>>> ac711c0facf4f6ebf54b70f59b35aa0a2f3c2a91

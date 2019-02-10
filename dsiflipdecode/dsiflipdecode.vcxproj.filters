@@ -18,24 +18,12 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="flipnote_parser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="flipnote_parser_audio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="adpcm.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="flipnote_file.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="flipnote_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bitmap_image.hpp">

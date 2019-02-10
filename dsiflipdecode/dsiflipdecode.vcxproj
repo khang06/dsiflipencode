@@ -151,12 +151,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitmap_image.hpp" />
     <ClInclude Include="flipnote_file.h" />
     <ClInclude Include="adpcm.h" />
+    <ClInclude Include="INIReader.h" />
+    <ClInclude Include="lodepng.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -26,10 +26,9 @@ void write_zeros(FILE* file, int count) {
     }
 }
 
-int encode() {
+int encode(std::string data_dir) {
     constexpr unsigned int frame_count = 839; // hardcoding this because doing it properly is too much work
     constexpr bool use_bgm = 1;
-    std::string directory = "data/androidswinning"; // only so i can concatenate
     constexpr char fsid[8] = { 0xFA, 0x70, 0xBC, 0xA0, 0x00, 0xEB, 0x73, 0x54 }; // what shows on my dsi, but in reverse
     constexpr char filename[18] = { 0xBC, 0x70, 0xFA, 0x31, 0x31, 0x32, 0x41, 0x38, 0x39, 0x36, 0x36, 0x42, 0x33, 0x37, 0x38, 0x39, 0x00, 0x00 }; // don't know how this is generated
     constexpr char partial_filename[8] = { 0xBC, 0x70, 0xFA, 0x11, 0x2A, 0x89, 0x66, 0xB3 }; // doesn't match above, even on real flipnotes
@@ -46,7 +45,7 @@ int encode() {
     std::cout << "Stage 0: Load BGM, thumbnail, and frames" << std::endl;
     if (use_bgm) {
         // load the bgm, input should be already encoded to adpcm with ffmpeg
-        std::string bgm_path = directory + "/audio.wav";
+        std::string bgm_path = data_dir + "/audio.wav";
         FILE* bgm_file;
         int bgm_err = fopen_s(&bgm_file, bgm_path.c_str(), "rb");
         if (bgm_err)
@@ -65,7 +64,7 @@ int encode() {
     }
 
     // load the thumbnail, expected size is 1536 or 0x600 bytes
-    std::string thumbnail_path = directory + "/thumbnail.bin";
+    std::string thumbnail_path = data_dir + "/thumbnail.bin";
     FILE* thumbnail_file;
     int thumbnail_err = fopen_s(&thumbnail_file, thumbnail_path.c_str(), "rb");
     if (thumbnail_err)
@@ -76,7 +75,7 @@ int encode() {
     rewind(thumbnail_file);
 
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
-        std::string frame_format = directory + "/frame_%d.bmp";
+        std::string frame_format = data_dir + "/frame_%d.bmp";
         char formatted_filename[0x100]; // this should really be std::string
         snprintf(formatted_filename, 0x100, frame_format.c_str(), frame);
         bitmap_image input(formatted_filename);
@@ -359,12 +358,17 @@ int encode() {
 }
 
 int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cout << "you need to provide a data directory";
+        return 1;
+    }
     try {
-        encode();
+        std::string data_dir(argv[1]);
+        encode(data_dir);
         return 0;
     }
     catch(std::string e) {
         std::cout << e << std::endl;
-        return 1;
+        return 2;
     }
 }

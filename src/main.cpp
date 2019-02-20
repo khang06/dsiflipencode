@@ -48,9 +48,8 @@ int encode(EncoderSettings settings) {
     std::cout << "Loading BGM..." << std::endl;
         // load the bgm, input should be already encoded to adpcm with ffmpeg
         std::string bgm_path = settings.data_dir + "/audio.wav";
-        FILE* bgm_file;
-        int bgm_err = fopen_s(&bgm_file, bgm_path.c_str(), "rb");
-        if (bgm_err)
+        FILE* bgm_file = fopen(bgm_path.c_str(), "rb");
+        if (!bgm_file)
             throw "Failed to open audio.wav!";
         fseek(bgm_file, 0, SEEK_END);
         size_t bgm_size = ftell(bgm_file) - 0x5E; // don't want the header
@@ -70,9 +69,8 @@ int encode(EncoderSettings settings) {
     // load the thumbnail, expected size is 1536 or 0x600 bytes
     std::cout << "Loading thumbnail..." << std::endl;
     std::string thumbnail_path = settings.data_dir + "/thumbnail.bin";
-    FILE* thumbnail_file;
-    int thumbnail_err = fopen_s(&thumbnail_file, thumbnail_path.c_str(), "rb");
-    if (thumbnail_err)
+    FILE* thumbnail_file = fopen(thumbnail_path.c_str(), "rb");
+    if (!thumbnail_file)
         throw "Failed to open thumbnail.bin!";
     fseek(thumbnail_file, 0, SEEK_END);
     if (ftell(thumbnail_file) != 0x600)
@@ -255,7 +253,6 @@ int encode(EncoderSettings settings) {
     }
 
     std::cout << "Writing PPM..." << std::endl;
-    FILE* ppm_file;
     dsiflipencode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
@@ -321,8 +318,8 @@ int encode(EncoderSettings settings) {
     }
     ppm_filename << ".ppm";
 
-    int ppm_errcode = fopen_s(&ppm_file, ppm_filename.str().insert(20, "_").c_str() , "wb");
-    if (ppm_errcode) {
+    FILE* ppm_file = fopen(ppm_filename.str().insert(20, "_").c_str() , "wb");
+    if (ppm_file) {
         throw "Could not open output file!";
     }
     // write ppm header

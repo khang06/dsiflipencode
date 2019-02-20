@@ -7,6 +7,7 @@
 #include "flipnote_file.h"
 #include "INIReader.h"
 #include "lodepng.h"
+#include "util.h"
 
 // this code sucks. this code sucks. this code sucks. this code sucks.
 // this.
@@ -212,7 +213,7 @@ int encode(EncoderSettings settings) {
                     }
                 }
                 // chunk_flag needs to be endian-flipped because of the way i'm handling it (and this is expected to run on little-endian systems)
-                chunk_flag = _byteswap_ulong(chunk_flag);
+                chunk_flag = Util::SwapEndian<unsigned int>(chunk_flag);
                 for (int i = 0; i < 4; ++i) {
                     encoded_frame.push_back(reinterpret_cast<char*>(&chunk_flag)[i]); // my code just gets worse and worse
                 }

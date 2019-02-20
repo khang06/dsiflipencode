@@ -32,12 +32,6 @@
     <ClInclude Include="flipnote_file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bitmap_image.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="adpcm.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="INIReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -164,9 +164,7 @@
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bitmap_image.hpp" />
     <ClInclude Include="flipnote_file.h" />
-    <ClInclude Include="adpcm.h" />
     <ClInclude Include="INIReader.h" />
     <ClInclude Include="lodepng.h" />
     <ClInclude Include="util.h" />

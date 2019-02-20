@@ -257,7 +257,7 @@ int encode(EncoderSettings settings) {
 
     std::cout << "Writing PPM..." << std::endl;
     FILE* ppm_file;
-    dsiflipdecode::FileHeader header;
+    dsiflipencode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
     if (settings.use_bgm)
@@ -292,12 +292,12 @@ int encode(EncoderSettings settings) {
     header.timestamp = settings.timestamp;
     header.unk2 = 0;
 
-    dsiflipdecode::AnimationSectionHeader anim_header;
+    dsiflipencode::AnimationSectionHeader anim_header;
     anim_header.frame_offset_table_size = frame_count * 4;
     anim_header.unk1 = 0;
     anim_header.flags = 0x410000; // no idea
 
-    dsiflipdecode::SoundSectionHeader sound_header;
+    dsiflipencode::SoundSectionHeader sound_header;
     if (settings.use_bgm)
         sound_header.bgm_size = bgm.size();
     else

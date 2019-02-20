@@ -1,7 +1,7 @@
 #pragma once
 #include "util.h"
 
-namespace dsiflipdecode {
+namespace dsiflipencode {
     #pragma pack (push, 1)
     typedef struct {
         uint32_t magic;

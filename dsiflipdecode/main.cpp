@@ -16,7 +16,7 @@
 // but it sucks a bit less now :)
 
 template <class T>
-void write_whatever_ptr(FILE* file, T good_variable_name, int size) {
+void write_whatever_ptr(FILE* file, T good_variable_name, size_t size) {
     for (int i = 0; i < size; ++i) {
         char temp = reinterpret_cast<char*>(good_variable_name)[i];
         fputc(temp, file);
@@ -55,6 +55,8 @@ int encode(EncoderSettings settings) {
             throw "Failed to open audio.wav!";
         fseek(bgm_file, 0, SEEK_END);
         size_t bgm_size = ftell(bgm_file) - 0x5E; // don't want the header
+        if (bgm_size > UINT_MAX)
+            throw "BGM is too big!";
         rewind(bgm_file);
         fseek(bgm_file, 0x5E, SEEK_SET);
         for (size_t i = 0; i < bgm_size; ++i) {
@@ -237,16 +239,20 @@ int encode(EncoderSettings settings) {
         frame_data.push_back(encoded_frame);
     }
 
-    int anim_data_size = 0;
+    size_t anim_data_size = 0;
     for (int frame = 0; frame < frame_data.size(); ++frame) {
         anim_data_size += frame_data.at(frame).size();
     }
+    if (anim_data_size > UINT_MAX)
+        throw "Animation data is too big! (total frame data size exceeds 32-bit unsigned integer limit)";
 
     std::vector<uint32_t> frame_offset_table;
-    uint32_t current_offset = 0;
+    size_t current_offset = 0;
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
         frame_offset_table.push_back(current_offset);
         current_offset += frame_data.at(frame).size();
+        if (current_offset > UINT_MAX)
+            throw "Animation data is too big! (frame offset exceeds 32-bit unsigned integer limit)";
     }
 
     std::cout << "Writing PPM..." << std::endl;

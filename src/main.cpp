@@ -1,7 +1,6 @@
 #include <array>
 #include <cstdio>
 #include <deque>
-#include <intrin.h>
 #include <iostream>
 #include <sstream>
 #include <iomanip>

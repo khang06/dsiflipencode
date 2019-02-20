@@ -53,7 +53,7 @@ int encode(EncoderSettings settings) {
             throw "Failed to open audio.wav!";
         fseek(bgm_file, 0, SEEK_END);
         size_t bgm_size = ftell(bgm_file) - 0x5E; // don't want the header
-        if (bgm_size > UINT_MAX)
+        if (bgm_size > UINT32_MAX)
             throw "BGM is too big!";
         rewind(bgm_file);
         fseek(bgm_file, 0x5E, SEEK_SET);
@@ -240,7 +240,7 @@ int encode(EncoderSettings settings) {
     for (int frame = 0; frame < frame_data.size(); ++frame) {
         anim_data_size += frame_data.at(frame).size();
     }
-    if (anim_data_size > UINT_MAX)
+    if (anim_data_size > UINT32_MAX)
         throw "Animation data is too big! (total frame data size exceeds 32-bit unsigned integer limit)";
 
     std::vector<uint32_t> frame_offset_table;
@@ -248,7 +248,7 @@ int encode(EncoderSettings settings) {
     for (unsigned int frame = 0; frame < frame_count; ++frame) {
         frame_offset_table.push_back(current_offset);
         current_offset += frame_data.at(frame).size();
-        if (current_offset > UINT_MAX)
+        if (current_offset > UINT32_MAX)
             throw "Animation data is too big! (frame offset exceeds 32-bit unsigned integer limit)";
     }
 

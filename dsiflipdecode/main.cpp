@@ -6,8 +6,8 @@
 #include <sstream>
 #include <iomanip>
 #include "flipnote_file.h"
-#include "bitmap_image.hpp"
 #include "INIReader.h"
+#include "lodepng.h"
 
 // this code sucks. this code sucks. this code sucks. this code sucks.
 // this.
@@ -41,8 +41,6 @@ public:
 };
 
 int encode(EncoderSettings settings) {
-    constexpr rgb_t rgb_white = { 255, 255, 255 };
-    constexpr rgb_t rgb_black = { 0, 0, 0 };
     std::vector<std::vector<char>> frame_data;
     std::vector<char> bgm;
     unsigned int frame_count = 0;
@@ -83,7 +81,7 @@ int encode(EncoderSettings settings) {
     std::cout << "Getting frame count..." << std::endl;
     for (unsigned int frame = 0; ; ++frame) {
         std::stringstream frame_filename;
-        frame_filename << settings.data_dir << "/frame_" << frame << ".bmp";
+        frame_filename << settings.data_dir << "/frame_" << frame << ".png";
         FILE* input = fopen(frame_filename.str().c_str(), "rb");
         if (!input) {
             break;
@@ -108,19 +106,22 @@ int encode(EncoderSettings settings) {
         unsigned char current_line_encoding_flags[192] = {}; // only layer 1 for now,
         // layer 2 will be blank
         unsigned char packed_line_encoding_flags[48] = {};
-        rgb_t pixel_color;
 
         std::stringstream frame_filename;
-        frame_filename << settings.data_dir << "/frame_" << frame << ".bmp";
-        bitmap_image current_frame(frame_filename.str().c_str());
-        if (!current_frame)
-            throw "Failed to load a frame!"; // TODO: make exceptions std::string so this can be better
+        frame_filename << settings.data_dir << "/frame_" << frame << ".png";
+        std::vector<unsigned char> decoded_frame;
+        unsigned int width, height;
+        unsigned int load_ret = lodepng::decode(decoded_frame, width, height, frame_filename.str());
+        if (load_ret)
+            throw "Failed to decode a frame!"; // TODO: make exceptions std::string so these can be better
+        if (width != 256 && height != 192)
+            throw "Frames need to be 256x192!";
 
         // convert the frame to something simpler so it's easier to work with
         for (int y = 0; y < 192; ++y) {
             for (int x = 0; x < 256; ++x) {
-                pixel_color = current_frame.get_pixel(x, y);
-                if (pixel_color.red < 127) // input is expected to be greyscale
+                unsigned char r_value = decoded_frame.at((x + y * 256) * 4);
+                if (r_value < 127) // input is expected to be greyscale, so it doesn't really matter what channel i check
                     temp_frame[y * 256 + x] = 1;
                 else
                     temp_frame[y * 256 + x] = 0;

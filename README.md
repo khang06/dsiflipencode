@@ -11,7 +11,7 @@ first, dump the frames of the video you're going to convert
 ```
 ffmpeg -i input.mp4 -vf scale=256:192 frame_%d.png
 ```
-ffmpeg doesn't create a frame_0.bmp, so remember to put something there (watermark, copy of first frame, etc)
+ffmpeg doesn't create a frame_0.png, so remember to put something there (watermark, copy of first frame, etc)
 
 for most videos (other than something like bad apple), you'll have to use dithering
 ```

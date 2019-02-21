@@ -4,6 +4,9 @@ now without a misleading project name
 before the copyright police murder me, this project uses https://github.com/lvandeve/lodepng, https://github.com/jtilly/inih, and parts of https://github.com/FFmpeg/FFmpeg
 
 ## usage
+you will need ffmpeg and imagemagick
+
+
 first, dump the frames of the video you're going to convert
 ```
 ffmpeg -i input.mp4 -vf scale=256:192 frame_%d.png
@@ -12,7 +15,7 @@ ffmpeg doesn't create a frame_0.bmp, so remember to put something there (waterma
 
 for most videos (other than something like bad apple), you'll have to use dithering
 ```
-mogrify -format png -colors 2 -type bilevel *.png
+magick mogrify -format png -colors 2 -type bilevel *.png
 ```
 to prepare the audio data, run this command
 ```

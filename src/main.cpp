@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <locale>
+#include <codecvt>
 #include "flipnote_file.h"
 #include "INIReader.h"
 #include "lodepng.h"
@@ -35,7 +37,7 @@ public:
     std::array<uint8_t, 8> fsid;
     std::array<uint8_t, 8> filename;
     std::array<uint8_t, 8> partial_filename;
-    std::u16string author;
+    std::wstring author;
     bool use_bgm;
     uint32_t timestamp;
 };
@@ -371,6 +373,7 @@ int main(int argc, char** argv) {
     INIReader reader(data_dir + "/config.ini");
     EncoderSettings settings;
     // https://stackoverflow.com/questions/7153935/how-to-convert-utf-8-stdstring-to-utf-16-stdwstring
+    std::wstringstream author;
     std::string filename;
     std::string fsid;
     std::string partial_filename;
@@ -383,6 +386,7 @@ int main(int argc, char** argv) {
         return 3;
     }
 
+    author << reader.Get("", "author", "dsiflipencode").c_str();
     filename = reader.Get("", "filename", "116AE34C2880B000");
     fsid = reader.Get("", "fsid", "5473EB00A0BC70FA");
     partial_filename = reader.Get("", "partial_filename", "BC70FA116AE34C28");
@@ -396,7 +400,7 @@ int main(int argc, char** argv) {
     std::copy_n(fsid_vector.begin(), 8, settings.fsid.begin());
     std::copy_n(partial_filename_vector.begin(), 8, settings.partial_filename.begin());
 
-    settings.author = u"thx msvc"; // fucking visual studio couldn't and still can't use std::codecvt without failing to link since vs2015 and none of the workarounds on stackoverflow worked and i'm just so fucking tired of this shit and that's why this is hardcoded
+    settings.author = author.str();
     settings.data_dir = data_dir;
     settings.use_bgm = reader.GetBoolean("", "use_bgm", true);
 

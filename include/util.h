@@ -42,7 +42,5 @@ namespace Util {
 
 // https://stackoverflow.com/questions/11815894/how-to-read-write-arbitrary-bits-in-c-c
 #define GETMASK(index, size) (((1 << (size)) - 1) << (index))
-#define READFROM(data, index, size) \
-    (((data)&GETMASK((index), (size))) >> (index))
-#define WRITETO(data, index, size, value) \
-    ((data) = ((data) & (~GETMASK((index), (size)))) | ((value) << (index)))
+#define READFROM(data, index, size) (((data)&GETMASK((index), (size))) >> (index))
+#define WRITETO(data, index, size, value) ((data) = ((data) & (~GETMASK((index), (size)))) | ((value) << (index)))

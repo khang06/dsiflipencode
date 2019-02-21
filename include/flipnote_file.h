@@ -42,7 +42,7 @@ namespace dsiflipencode {
         uint8_t frame_speed;
         uint8_t bgm_frame_speed;
         uint8_t encoded; // encoder-exclusive flag for encoded flipnote detection
-        INSERT_PADDING_BYTES(13);
+        INSERT_PADDING_BYTES(13)
     } SoundSectionHeader;
     // size check is needed because raw bytes will be casted to this
     static_assert(sizeof(SoundSectionHeader) == 0x20, "dsiflipdecode::SoundSectionHeader must be 0x8 bytes long");

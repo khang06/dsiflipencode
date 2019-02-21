@@ -16,3 +16,9 @@ target_include_directories(dsiflipencode
 )
 
 target_compile_features(dsiflipencode PUBLIC cxx_std_17)
+
+if(MSVC)
+  target_compile_options(dsiflipencode PRIVATE /W4 /WX)
+else(MSVC)
+  target_compile_options(dsiflipencode PRIVATE -Wall -Wextra -pedantic)
+endif(MSVC)

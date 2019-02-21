@@ -17,14 +17,14 @@
 
 template <class T>
 void write_whatever_ptr(FILE* file, T good_variable_name, size_t size) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         char temp = reinterpret_cast<char*>(good_variable_name)[i];
         fputc(temp, file);
     }
 }
 
-void write_zeros(FILE* file, int count) {
-    for (int i = 0; i < count; ++i) {
+void write_zeros(FILE* file, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
         fputc(0, file);
     }
 }
@@ -200,7 +200,6 @@ int encode(EncoderSettings settings) {
                 std::vector<char> chunks;
                 char used_chunks[32] = {};
                 unsigned int chunk_flag = 0;
-                unsigned int bit_index = 0; // 0 to 31
 
                 // first we need to figure out what chunks are used and write the chunk flag
                 for (unsigned int chunk = 0; chunk < 32; ++chunk) {
@@ -238,7 +237,7 @@ int encode(EncoderSettings settings) {
     }
 
     size_t anim_data_size = 0;
-    for (int frame = 0; frame < frame_data.size(); ++frame) {
+    for (size_t frame = 0; frame < frame_data.size(); ++frame) {
         anim_data_size += frame_data.at(frame).size();
     }
     if (anim_data_size > UINT32_MAX)
@@ -334,11 +333,11 @@ int encode(EncoderSettings settings) {
     // write animation section header
     write_whatever_ptr(ppm_file, &anim_header, sizeof(anim_header));
     // write frame offset table
-    for (int i = 0; i < frame_offset_table.size(); ++i) {
+    for (size_t i = 0; i < frame_offset_table.size(); ++i) {
         write_whatever_ptr(ppm_file, &frame_offset_table.at(i), 4);
     }
     // write frame data
-    for (int frame = 0; frame < frame_data.size(); ++frame) {
+    for (size_t frame = 0; frame < frame_data.size(); ++frame) {
         write_whatever_ptr(ppm_file, frame_data.at(frame).data(), frame_data.at(frame).size());
     }
     // write sound effect usage flags

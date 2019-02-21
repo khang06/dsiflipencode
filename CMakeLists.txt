@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(dsiflipencode)
 
 set(SOURCES
+	src/adpcm_encoder.cpp
     src/lodepng.cpp
     src/main.cpp
     src/util.cpp

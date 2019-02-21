@@ -1,8 +1,10 @@
 #include <array>
+#include <algorithm>
 #include <cstdio>
 #include <deque>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <locale>
 #include <codecvt>
@@ -10,6 +12,9 @@
 #include "INIReader.h"
 #include "lodepng.h"
 #include "util.h"
+#include "adpcm_encoder.h"
+#define DR_WAV_IMPLEMENTATION
+#include "dr_wav.h"
 
 // this code sucks. this code sucks. this code sucks. this code sucks.
 // this.
@@ -40,6 +45,8 @@ public:
     std::wstring author;
     bool use_bgm;
     uint32_t timestamp;
+    int frame_speed;
+    int bgm_frame_speed;
 };
 
 int encode(EncoderSettings settings) {
@@ -48,25 +55,22 @@ int encode(EncoderSettings settings) {
     unsigned int frame_count = 0;
 
     if (settings.use_bgm) {
-    std::cout << "Loading BGM..." << std::endl;
-        // load the bgm, input should be already encoded to adpcm with ffmpeg
+        std::cout << "Loading BGM..." << std::endl;
         std::string bgm_path = settings.data_dir + "/audio.wav";
-        FILE* bgm_file = fopen(bgm_path.c_str(), "rb");
-        if (!bgm_file)
-            throw "Failed to open audio.wav!";
-        fseek(bgm_file, 0, SEEK_END);
-        size_t bgm_size = ftell(bgm_file) - 0x5E; // don't want the header
-        if (bgm_size > UINT32_MAX)
+        unsigned int channels;
+        unsigned int sample_rate; // won't actually be used, but there's not much i can do about that
+        uint64_t pcm_frame_count;
+        int16_t* sample_data = drwav_open_file_and_read_pcm_frames_s16(bgm_path.c_str(), &channels, &sample_rate, &pcm_frame_count);
+        AdpcmEncoder encoder;
+        if (!sample_data)
+            throw "Could not parse audio.wav!";
+        if (channels != 1)
+            throw "WAV file needs to be mono!";
+        if (pcm_frame_count > UINT32_MAX)
             throw "BGM is too big!";
-        rewind(bgm_file);
-        fseek(bgm_file, 0x5E, SEEK_SET);
-        for (size_t i = 0; i < bgm_size; ++i) {
-            char byte;
-            fread(&byte, 1, 1, bgm_file);
-            //bgm.push_back((byte & 0x0F) << 4 | (byte & 0xF0) >> 4);
-            bgm.push_back(byte);
+        for (uint64_t i = 0; i < pcm_frame_count; i += 2) {
+            bgm.push_back(encoder.EncodeSample(sample_data[i]) | encoder.EncodeSample(sample_data[i + 1]) << 4);
         }
-        fclose(bgm_file);
     }
 
     // load the thumbnail, expected size is 1536 or 0x600 bytes
@@ -303,8 +307,8 @@ int encode(EncoderSettings settings) {
     sound_header.se1_size = 0;
     sound_header.se2_size = 0;
     sound_header.se3_size = 0;
-    sound_header.frame_speed = 0;
-    sound_header.bgm_frame_speed = 0;
+    sound_header.frame_speed = 8 - settings.frame_speed;
+    sound_header.bgm_frame_speed = 8 - settings.bgm_frame_speed;
     sound_header.encoded = 1;
     memset(sound_header.pad45, 0, 13);
 
@@ -321,7 +325,7 @@ int encode(EncoderSettings settings) {
     ppm_filename << ".ppm";
 
     FILE* ppm_file = fopen(ppm_filename.str().insert(20, "_").c_str() , "wb");
-    if (ppm_file) {
+    if (!ppm_file) {
         throw "Could not open output file!";
     }
     // write ppm header
@@ -403,6 +407,8 @@ int main(int argc, char** argv) {
     settings.author = author.str();
     settings.data_dir = data_dir;
     settings.use_bgm = reader.GetBoolean("", "use_bgm", true);
+    settings.frame_speed = std::clamp(static_cast<int>(reader.GetInteger("", "frame_speed", 8)), 0, 8);
+    settings.bgm_frame_speed = std::clamp(static_cast<int>(reader.GetInteger("", "bgm_frame_speed", 8)), 0, 8);
 
     uint64_t unix_timestamp = std::stoul(reader.Get("", "timestamp", "3133684800"));
     if (unix_timestamp > UINT32_MAX + static_cast<uint64_t>(946684800)) {

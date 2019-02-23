@@ -27,14 +27,14 @@ a `thumbnail.bin` can be grabbed from a flipnote by copying 0x600 bytes at 0xA0,
 
 `config.ini` stores various metadata for the generated flipnote. here's a commentated example
 ```
-author=Khang                      # utf-8 (sorry people who don't speak english) string (11 character limit)
-filename=116AE34C2880B000         # the last 2 parts of a flipnote filename, without the _
-fsid=5473EB00A0BC70FA             # the flipnote studio id that shows in your flipnote studio settings
-partial_filename=BC70FA116AE34C28 # dump 8 bytes at 0x92 from a real flipnote
-use_bgm=true                      # i don't think i need to explain this
-frame_speed=8                     # see https://github.com/Flipnote-Collective/flipnote-studio-docs/wiki/PPM-format
-bgm_frame_speed=8                 # ^
-timestamp=1550776227              # current unix timestamp
+author=Khang                      ; utf-8 (sorry people who don't speak english) string (11 character limit)
+filename=116AE34C2880B000         ; the last 2 parts of a flipnote filename, without the _
+fsid=5473EB00A0BC70FA             ; the flipnote studio id that shows in your flipnote studio settings
+partial_filename=BC70FA116AE34C28 ; dump 8 bytes at 0x92 from a real flipnote
+use_bgm=true                      ; i don't think i need to explain this
+frame_speed=8                     ; see https://github.com/Flipnote-Collective/flipnote-studio-docs/wiki/PPM-format
+bgm_frame_speed=8                 ; ^
+timestamp=1550776227              ; current unix timestamp
 ```
 finally, run the executable on the directory where all of these files are stored
 ```

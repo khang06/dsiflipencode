@@ -390,7 +390,7 @@ int main(int argc, char** argv) {
         return 3;
     }
 
-    author << reader.Get("", "author", "dsiflipencode").c_str();
+    author << reader.Get("", "author", "dsiflipenc").c_str();
     filename = reader.Get("", "filename", "116AE34C2880B000");
     fsid = reader.Get("", "fsid", "5473EB00A0BC70FA");
     partial_filename = reader.Get("", "partial_filename", "BC70FA116AE34C28");

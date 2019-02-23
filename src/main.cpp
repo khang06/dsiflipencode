@@ -310,7 +310,7 @@ int encode(EncoderSettings settings) {
     sound_header.frame_speed = 8 - settings.frame_speed;
     sound_header.bgm_frame_speed = 8 - settings.bgm_frame_speed;
     sound_header.encoded = 1;
-    memset(sound_header.pad45, 0, 13);
+    memset(sound_header.pad44, 0, 12);
 
     // https://stackoverflow.com/questions/7639656/getting-a-buffer-into-a-stringstream-in-hex-representation/
     std::stringstream ppm_filename;
@@ -390,7 +390,7 @@ int main(int argc, char** argv) {
         return 3;
     }
 
-    author << reader.Get("", "author", "dsiflipencode").c_str();
+    author << reader.Get("", "author", "dsiflipenc").c_str();
     filename = reader.Get("", "filename", "116AE34C2880B000");
     fsid = reader.Get("", "fsid", "5473EB00A0BC70FA");
     partial_filename = reader.Get("", "partial_filename", "BC70FA116AE34C28");

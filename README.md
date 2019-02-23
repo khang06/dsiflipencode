@@ -1,6 +1,8 @@
 # dsiflipencode
 now without a misleading project name
 
+![](https://i.imgur.com/tLniSoC.png)
+
 before the copyright police murder me, this project uses https://github.com/lvandeve/lodepng, https://github.com/jtilly/inih, and parts of https://github.com/FFmpeg/FFmpeg
 
 ## usage

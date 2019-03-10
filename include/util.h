@@ -4,6 +4,7 @@
 #include <codecvt>
 #include <locale>
 #include <string>
+#include <climits>
 
 // most of these functions are from yuzu/citra/dolphin
 /// Textually concatenates two tokens. The double-expansion is required by the C preprocessor.

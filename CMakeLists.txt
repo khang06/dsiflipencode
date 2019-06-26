@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 project(dsiflipencode)
 
 set(SOURCES
-	src/adpcm_encoder.cpp
+    src/adpcm_encoder.cpp
     src/lodepng.cpp
     src/main.cpp
     src/util.cpp
@@ -23,3 +23,9 @@ if(MSVC)
 else(MSVC)
   target_compile_options(dsiflipencode PRIVATE -Wall -Wextra -pedantic)
 endif(MSVC)
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")

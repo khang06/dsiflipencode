@@ -51,9 +51,8 @@ getting an encoded flipnote to run on a real dsi/3ds takes a bit more work thoug
 
 it's also worth noting that flipnotes that won't load from the sd card might load from flipnote hatena
 
-an example data directory (the entire bad apple music video) is available at https://my.mixtape.moe/jwpkte.7z
-
-**THIS WILL NOT LOAD ON A REAL DSI/3DS, SIGNED OR NOT, DUE TO HOW BIG IT IS**
+check out Bad Apple!! encoded with this tool!
+https://www.youtube.com/watch?v=Ko5Pq655caY
 
 
 discord: `Khangaroo#5062`

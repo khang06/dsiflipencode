@@ -262,6 +262,10 @@ int encode(EncoderSettings settings) {
     dsiflipencode::FileHeader header;
     header.magic = 0x41524150; // PARA endian-flipped
     header.anim_data_size = anim_data_size + 8 + frame_count * 4;
+    // padding is so weird, i'd rather not get into it
+    int align_size = 4 - ((0x6A0 + header.anim_data_size + frame_count) % 4);
+    if (align_size != 4)
+        header.anim_data_size += align_size;
     if (settings.use_bgm)
         header.sound_data_size = bgm.size();
     else
@@ -348,10 +352,8 @@ int encode(EncoderSettings settings) {
     }
     // write sound effect usage flags
     write_zeros(ppm_file, frame_count);
-    // flipnote is weird, if the flipnote is already aligned to 2 bytes, it won't do the padding
-    // despite it padding to 4 bytes...
-    int align_size = 4 - ((0x6A0 + header.anim_data_size + frame_count) % 4);
-    if (align_size != 4 && align_size != 2)
+    // padding
+    if (align_size != 4)
         write_zeros(ppm_file, align_size);
     // write sound header
     write_whatever_ptr(ppm_file, &sound_header, sizeof(sound_header));

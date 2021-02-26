@@ -15,6 +15,14 @@ ffmpeg -i input.mp4 -vf scale=256:192 frame_%d.png
 ```
 ffmpeg doesn't create a frame_0.png, so remember to put something there (watermark, copy of first frame, etc)
 
+Should the audio be out of sync, forcce the video into 30fps
+```
+ffmpeg -i ..\..\frames\input.mp4 -filter:v fps=30 ..\..\frames\frame_%d.png
+```
+then scale them afterwards
+```
+ffmpeg -i ..\..\frames\frame_%d.png -vf scale=256:192 ..\..\frames\frame_%d.png
+```
 for most videos (other than something like bad apple), you'll have to use dithering
 ```
 magick mogrify -format png -colors 2 -type bilevel *.png
